@@ -1,100 +1,99 @@
-# CampusConnect
+#  CampusConnect
 
-CampusConnect is a Streamlit app for managing campus ambassador programs with a built-in GitHub intelligence layer. It helps organizations create tasks, review submissions, compare ambassadors, and turn public GitHub signals into shortlist decisions in under two minutes.
+CampusConnect is a centralized platform to manage Campus Ambassador programs with **task automation, performance tracking, and gamification**, enhanced by a **GitHub intelligence layer** for fast talent evaluation.
 
-## What problem it solves
+---
 
-Most campus ambassador workflows track activity, but they do not help organizations understand technical potential quickly. CampusConnect combines:
+## 🔗 Live Demo
+[https://ridhima-2412-campusconnect-app-yxr7oo.streamlit.app/](url)
 
-- ambassador execution data
-- public GitHub signal analysis
-- shortlist workflow
-- lightweight review and scoring
+---
 
-That makes the product useful for both operations and talent discovery.
+## 🎥 Demo Video
+[https://drive.google.com/file/d/1IeOYtpEm47kVqAUYMg2AiLzUeHGwl83Z/view?usp=sharing](url)
 
-## Why this project is strong against the judging criteria
+This demo showcases:
+- Admin dashboard and insights
+- Task assignment and submission workflow
+- Leaderboard and gamification system
+- GitHub-based ambassador evaluation
 
-### Impact
+---
 
-- One GitHub username gives a structured signal snapshot with score, verdict, strengths, risks, and proof-point repositories.
-- Organizations can compare ambassadors without asking the user to do heavy manual work.
+## 💡 Problem
 
-### Innovation
+Campus Ambassador programs are often managed using spreadsheets, forms, and messaging apps, leading to:
 
-- GitHub is not treated like a decorative badge.
-- The product connects GitHub analysis to real ambassador operations through Fit Score and a Shortlist Board.
+- ❌ No centralized system  
+- ❌ Unclear task management  
+- ❌ No motivation or recognition  
+- ❌ No way to identify top performers  
 
-### Technical execution
+This results in low engagement and poor scalability.
 
-- Streamlit frontend
-- SQLite backend
-- modular structure with separated pages, theme, and shared components
-- seeded demo data and deterministic demo logins
+---
 
-### User experience
+## 🚀 Solution
 
-- dark-themed dashboard layout
-- separate organization and ambassador flows
-- fast GitHub analysis flow
-- shortlist-ready decision surfaces
+CampusConnect transforms this into a **structured, scalable, and engaging system** by:
 
-### Presentation
+- Automating task assignment and tracking  
+- Introducing gamification (leaderboards, scores, recognition)  
+- Providing real-time dashboards  
+- Using GitHub intelligence to evaluate technical potential  
 
-- easy live demo path
-- clear before-and-after story
-- immediate visible output from GitHub Lab and Fit Score
+---
 
-## Core features
+## ⚙️ Key Features
 
-### Organization features
+### 👩‍💼 Organization Panel
+- Dashboard with real-time insights  
+- Task creation and submission review  
+- Ambassador performance tracking  
+- Leaderboard and engagement metrics  
+- Shortlist Board (Watch / High Potential / Selected)  
+- GitHub Lab for analyzing public profiles  
 
-- overview dashboard with operational insights
-- task creation and review queue
-- ambassador roster with GitHub and Fit Score signals
-- GitHub Lab for analyzing any public profile
-- Shortlist Board with `Watch`, `Shortlist`, and `High Potential` lanes
-- leaderboard and program health summaries
+### 🧑‍🎓 Ambassador Panel
+- View and complete assigned tasks  
+- Submit proof of work  
+- Track personal performance and progress  
+- View leaderboard ranking  
+- GitHub profile analysis  
 
-### Ambassador features
+---
 
-- task submission and review tracking
-- badge progress and personal dashboard
-- GitHub profile analysis and save flow
-- visibility improvements through public technical signal
+## 🧠 Smart Insights (Innovation)
 
-## GitHub analysis model
+- **GitHub Analyzer** generates:
+  - Score (out of 100)
+  - Strengths & risks
+  - Role hints
+  - Repository proof points  
 
-The GitHub analyzer scores public signals using:
+- **Ambassador Fit Score** combines:
+  - Task completion
+  - Consistency (streaks)
+  - GitHub score  
 
-- profile completeness
-- original repositories
-- recent activity
-- reach and engagement
-- language breadth
+👉 Enables fast, data-driven decision making.
 
-It returns:
+---
 
-- overall score out of 100
-- tier
-- role hint
-- verdict
-- strengths
-- watch-outs
-- repository proof points
+## 🛠 Tech Stack
 
-## Fit Score
+- **Frontend:** Streamlit  
+- **Backend:** Python  
+- **Database:** SQLite  
+- **Architecture:** Modular (separate pages, components, and services)
 
-CampusConnect also generates an internal `Ambassador Fit Score` using:
+---
 
-- delivery points
-- approved task count
-- streak consistency
-- GitHub score
+## 📂 Project Structure
 
-This helps organizations move from raw data to action faster.
 
-## Project structure
+
+
 
 ```text
 CampusConnect/
@@ -157,8 +156,13 @@ demo123
 6. Open Shortlist Board to show decision lanes.
 7. Switch to an ambassador account and show task progress and personal GitHub score.
 
-## Notes
+## Impact
+Reduces manual effort in managing ambassadors
+Improves engagement through gamification
+Helps identify top performers instantly
+Bridges operations + talent discovery
 
-- The app seeds demo data automatically.
-- Demo account passwords are reset to `demo123` on startup.
+ ## Conclusion
+
+CampusConnect converts a fragmented, manual process into a data-driven, gamified, and scalable growth engine for organizations.3` on startup.
 - A GitHub token is optional but recommended during live demos to avoid rate limits.
