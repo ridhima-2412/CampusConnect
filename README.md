@@ -108,7 +108,7 @@ CampusConnect/
 |-- database.py
 |-- requirements.txt
 |-- README.md
-|-- DEMO_SCRIPT.md
+
 ```
 
 ## Run locally
