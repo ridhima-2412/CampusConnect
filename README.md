@@ -5,8 +5,7 @@ CampusConnect is a centralized platform to manage Campus Ambassador programs wit
 ---
 
 ## 🔗 Live Demo
-[https://ridhima-2412-campusconnect-app-yxr7oo.streamlit.app/](url)
-
+[Open CampusConnect Live Demo](url)
 ---
 
 ## 🎥 Demo Video
