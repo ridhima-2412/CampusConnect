@@ -157,12 +157,11 @@ demo123
 7. Switch to an ambassador account and show task progress and personal GitHub score.
 
 ## Impact
-Reduces manual effort in managing ambassadors
-Improves engagement through gamification
-Helps identify top performers instantly
-Bridges operations + talent discovery
+-Reduces manual effort in managing ambassadors
+-Improves engagement through gamification
+-Helps identify top performers instantly
+-Bridges operations + talent discovery
 
  ## Conclusion
 
 CampusConnect converts a fragmented, manual process into a data-driven, gamified, and scalable growth engine for organizations.3` on startup.
-- A GitHub token is optional but recommended during live demos to avoid rate limits.
