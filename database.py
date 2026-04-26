@@ -1,7 +1,5 @@
 import sqlite3
 import hashlib
-import os
-from datetime import datetime, timedelta
 import random
 
 DB_PATH = "campusconnect.db"
@@ -93,9 +91,19 @@ def init_db():
         joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY(ambassador_id, org_id)
     );
+
+    CREATE TABLE IF NOT EXISTS ambassador_pipeline (
+        org_id INTEGER NOT NULL,
+        ambassador_id INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'watch' CHECK(status IN ('watch', 'shortlist', 'high_potential')),
+        notes TEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(org_id, ambassador_id)
+    );
     """)
 
-    # Seed badges
+    ensure_user_github_columns(c)
+
     c.execute("SELECT COUNT(*) FROM badges")
     if c.fetchone()[0] == 0:
         badges = [
@@ -109,33 +117,45 @@ def init_db():
         ]
         c.executemany("INSERT INTO badges (name, description, icon, condition_type, condition_value) VALUES (?,?,?,?,?)", badges)
 
-    # Seed demo data
     c.execute("SELECT COUNT(*) FROM users")
     if c.fetchone()[0] == 0:
         seed_demo_data(c)
+    seed_demo_github_links(c)
+    ensure_demo_login_accounts(c)
 
     conn.commit()
     conn.close()
 
+def ensure_user_github_columns(c):
+    c.execute("PRAGMA table_info(users)")
+    existing_columns = {row["name"] for row in c.fetchall()}
+
+    github_columns = {
+        "github_username": "TEXT",
+        "github_score": "INTEGER DEFAULT 0",
+        "github_tier": "TEXT",
+        "github_data": "TEXT",
+    }
+
+    for column, definition in github_columns.items():
+        if column not in existing_columns:
+            c.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
+
 def seed_demo_data(c):
     colors = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6']
 
-    # Create org user
     c.execute("""INSERT INTO users (name, email, password, role, avatar_color)
                  VALUES (?, ?, ?, 'org', ?)""",
               ("TechCorp HQ", "org@demo.com", hash_password("demo123"), '#6366f1'))
     org_user_id = c.lastrowid
 
-    # Create org
     c.execute("""INSERT INTO organizations (name, description, owner_id, invite_code)
                  VALUES (?, ?, ?, ?)""",
               ("TechCorp", "Leading tech startup building the future", org_user_id, "TECHCORP2024"))
     org_id = c.lastrowid
 
-    # Update org user's org_id
     c.execute("UPDATE users SET org_id=? WHERE id=?", (org_id, org_user_id))
 
-    # Create ambassadors
     ambassadors = [
         ("Arjun Sharma", "arjun@demo.com", "IIT Delhi", 340, 5),
         ("Priya Patel", "priya@demo.com", "BITS Pilani", 290, 3),
@@ -152,7 +172,6 @@ def seed_demo_data(c):
         amb_ids.append(c.lastrowid)
         c.execute("INSERT INTO ambassador_orgs (ambassador_id, org_id) VALUES (?,?)", (c.lastrowid, org_id))
 
-    # Create tasks
     tasks = [
         ("Instagram Story Campaign", "Post a story about our product with the hashtag #TechCorpRises", "promotion", 50, "2024-12-31"),
         ("College Referral Drive", "Get 3 friends to sign up using your referral code", "referral", 80, "2024-12-25"),
@@ -167,7 +186,6 @@ def seed_demo_data(c):
                      VALUES (?,?,?,?,?,?)""", (org_id, title, desc, ttype, pts, deadline))
         task_ids.append(c.lastrowid)
 
-    # Create submissions
     statuses = ['approved', 'approved', 'pending', 'rejected', 'pending']
     for i, amb_id in enumerate(amb_ids[:4]):
         for j, task_id in enumerate(task_ids[:3]):
@@ -178,7 +196,6 @@ def seed_demo_data(c):
                       (task_id, amb_id, f"Completed task: uploaded proof and evidence",
                        "https://example.com/proof", status, score))
 
-    # Award some badges
     c.execute("SELECT id FROM badges WHERE condition_type='tasks_completed' AND condition_value=1")
     badge = c.fetchone()
     if badge:
@@ -187,3 +204,27 @@ def seed_demo_data(c):
                 c.execute("INSERT INTO user_badges (user_id, badge_id) VALUES (?,?)", (amb_id, badge['id']))
             except:
                 pass
+
+def seed_demo_github_links(c):
+    demo_profiles = {
+        "arjun@demo.com": "octocat",
+        "priya@demo.com": "gaearon",
+        "rahul@demo.com": "sindresorhus",
+    }
+    for email, username in demo_profiles.items():
+        c.execute("""UPDATE users
+                     SET github_username=COALESCE(NULLIF(github_username, ''), ?)
+                     WHERE email=?""", (username, email))
+
+def ensure_demo_login_accounts(c):
+    demo_accounts = [
+        "org@demo.com",
+        "arjun@demo.com",
+        "priya@demo.com",
+        "rahul@demo.com",
+        "sneha@demo.com",
+        "karan@demo.com",
+    ]
+    demo_hash = hash_password("demo123")
+    for email in demo_accounts:
+        c.execute("UPDATE users SET password=? WHERE email=?", (demo_hash, email))

@@ -1,6 +1,4 @@
-import streamlit as st
 from database import get_conn, hash_password
-from datetime import datetime, date
 
 def login_user(email, password):
     conn = get_conn()
@@ -30,7 +28,7 @@ def register_org(name, email, password, org_name, org_desc):
     finally:
         conn.close()
 
-def register_ambassador(name, email, password, college, invite_code):
+def register_ambassador(name, email, password, college, invite_code, github_username=None):
     conn = get_conn()
     c = conn.cursor()
     try:
@@ -39,8 +37,9 @@ def register_ambassador(name, email, password, college, invite_code):
         if not org:
             return False, "Invalid invite code."
         org_id = org['id']
-        c.execute("INSERT INTO users (name, email, password, role, college, org_id) VALUES (?,?,?,'ambassador',?,?)",
-                  (name, email, hash_password(password), college, org_id))
+        c.execute("""INSERT INTO users (name, email, password, role, college, org_id, github_username)
+                     VALUES (?,?,?,'ambassador',?,?,?)""",
+                  (name, email, hash_password(password), college, org_id, (github_username or "").strip() or None))
         amb_id = c.lastrowid
         c.execute("INSERT INTO ambassador_orgs (ambassador_id, org_id) VALUES (?,?)", (amb_id, org_id))
         conn.commit()
@@ -58,6 +57,14 @@ def get_org(org_id):
     conn.close()
     return dict(org) if org else None
 
+def get_user(user_id):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT * FROM users WHERE id=?", (user_id,))
+    user = c.fetchone()
+    conn.close()
+    return dict(user) if user else None
+
 def get_ambassadors(org_id):
     conn = get_conn()
     c = conn.cursor()
@@ -71,6 +78,33 @@ def get_ambassadors(org_id):
     rows = c.fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+def get_ambassadors_with_github(org_id):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""SELECT u.*,
+                 ap.status as pipeline_status,
+                 ap.notes as pipeline_notes,
+                 ap.updated_at as pipeline_updated_at,
+                 (SELECT COUNT(*) FROM submissions s
+                  JOIN tasks t ON s.task_id=t.id
+                  WHERE s.ambassador_id=u.id AND s.status='approved' AND t.org_id=?) as tasks_done
+                 FROM users u
+                 LEFT JOIN ambassador_pipeline ap
+                   ON ap.ambassador_id=u.id AND ap.org_id=?
+                 WHERE u.org_id=? AND u.role='ambassador'
+                 ORDER BY
+                    CASE WHEN u.github_score IS NULL THEN -1 ELSE u.github_score END DESC,
+                    u.points DESC,
+                    u.name ASC""", (org_id, org_id, org_id))
+    rows = c.fetchall()
+    conn.close()
+    ambassadors = [dict(r) for r in rows]
+    for ambassador in ambassadors:
+        ambassador["pipeline_status"] = ambassador.get("pipeline_status") or "watch"
+        ambassador["fit_score"] = calculate_fit_score(ambassador)
+        ambassador["fit_label"] = fit_label(ambassador["fit_score"])
+    return ambassadors
 
 def get_tasks(org_id):
     conn = get_conn()
@@ -181,6 +215,18 @@ def get_user_badges(user_id):
     conn.close()
     return [dict(r) for r in rows]
 
+def save_github_data(user_id, github_username, github_score, github_tier, github_data):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""UPDATE users
+                 SET github_username=?,
+                     github_score=?,
+                     github_tier=?,
+                     github_data=?
+                 WHERE id=?""", (github_username, github_score, github_tier, github_data, user_id))
+    conn.commit()
+    conn.close()
+
 def create_task(org_id, title, desc, task_type, points, deadline):
     conn = get_conn()
     c = conn.cursor()
@@ -203,6 +249,16 @@ def get_org_stats(org_id):
     c.execute("""SELECT COUNT(*) as cnt FROM submissions s 
                  JOIN tasks t ON s.task_id=t.id WHERE t.org_id=? AND s.status='pending'""", (org_id,))
     stats['pending_review'] = c.fetchone()['cnt']
+    c.execute("""SELECT COUNT(*) as cnt FROM users
+                 WHERE org_id=? AND role='ambassador' AND github_username IS NOT NULL
+                 AND TRIM(github_username) != ''""", (org_id,))
+    stats['github_linked'] = c.fetchone()['cnt']
+    c.execute("""SELECT COUNT(*) as cnt FROM ambassador_pipeline
+                 WHERE org_id=? AND status='shortlist'""", (org_id,))
+    stats['shortlisted'] = c.fetchone()['cnt']
+    c.execute("""SELECT COUNT(*) as cnt FROM ambassador_pipeline
+                 WHERE org_id=? AND status='high_potential'""", (org_id,))
+    stats['high_potential'] = c.fetchone()['cnt']
     conn.close()
     return stats
 
@@ -224,3 +280,46 @@ def get_ambassador_stats(user_id, org_id):
     stats['pending'] = c.fetchone()['cnt']
     conn.close()
     return stats
+
+def calculate_fit_score(ambassador):
+    github_score = ambassador.get("github_score") or 0
+    points = ambassador.get("points") or 0
+    tasks_done = ambassador.get("tasks_done") or 0
+    streak = ambassador.get("streak") or 0
+
+    delivery_score = min(35, points // 12)
+    execution_score = min(25, tasks_done * 4)
+    consistency_score = min(15, streak * 3)
+    technical_score = min(25, int(github_score * 0.25))
+    return min(100, delivery_score + execution_score + consistency_score + technical_score)
+
+def fit_label(score):
+    if score >= 80:
+        return "High potential"
+    if score >= 65:
+        return "Shortlist ready"
+    if score >= 45:
+        return "Worth tracking"
+    return "Early signal"
+
+def save_pipeline_status(org_id, ambassador_id, status, notes=""):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute(
+        """INSERT INTO ambassador_pipeline (org_id, ambassador_id, status, notes, updated_at)
+           VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+           ON CONFLICT(org_id, ambassador_id)
+           DO UPDATE SET status=excluded.status,
+                         notes=excluded.notes,
+                         updated_at=CURRENT_TIMESTAMP""",
+        (org_id, ambassador_id, status, notes),
+    )
+    conn.commit()
+    conn.close()
+
+def get_shortlist_board(org_id):
+    ambassadors = get_ambassadors_with_github(org_id)
+    board = {"watch": [], "shortlist": [], "high_potential": []}
+    for ambassador in ambassadors:
+        board[ambassador.get("pipeline_status") or "watch"].append(ambassador)
+    return board
